@@ -8,21 +8,21 @@ const AssistantV1 = require('ibm-watson/assistant/v1');
 
 const server = express();
 
-// database dependencies
+// // database dependencies
 
 const mysql = require('mysql');
 const conn=mysql.createConnection({
-	host:'localhost',
+	host:'101.101.160.73',
 	user:'root',
-	password:'1234',
-	database:'dktk'
+	password:'xpffprmfoaRlfl123',
+	database:'song'
 });
 
 conn.connect();
 
-conn.query('select * from user', function(err, results, fields){
+conn.query('select * from ex', function(err, results, fields){
 	if (err) throw err;
-	console.log('The result is', results[0].username);
+	console.log('The result is', results[0]);
 });
 
 conn.end();
