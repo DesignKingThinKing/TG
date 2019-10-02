@@ -20,9 +20,12 @@ const conn=mysql.createConnection({
 
 conn.connect();
 
+let A;
+
 conn.query('select * from ex', function(err, results, fields){
+	A=results;
 	if (err) throw err;
-	console.log('The result is', results[0]);
+	console.log('The result is', A[0].title);
 });
 
 conn.end();
@@ -62,7 +65,7 @@ telegram.on('message', (msg) => {
 			console.log('error:', err);
 		else {
 			context = response.context;
-			telegram.sendMessage(chatId, response.output.text[0]);
+			telegram.sendMessage(chatId, response.output.text[0]+A[0].title);
 		}
 	});	
 });
