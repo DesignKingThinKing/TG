@@ -60,19 +60,36 @@ telegram.on('message', (msg) => {
 			console.log('error:', err);
 		else {
 			context = response.context;
-			telegram.sendMessage(chatId, response.output.text[0]+ResultText[0].title);
+			telegram.sendMessage(chatId, response.output.text[0]+ResultText[0].title); // 답장
 			RESULTExample = response.output.text[0]+ResultText[0].title;
 		}
-	});	
+	});
 });
 
 // TTS - [ipaddress]/tts에 들어갔을 때 음성이 나옴
-app.get('/tts', function(req, res) {
+// app.get('/tts', function(req, res) {
+// 	var api_url = 'https://naveropenapi.apigw.ntruss.com/voice/v1/tts';
+// 	var request = require('request');
+// 	var options = {
+// 	  url: api_url,
+// 	  form: { speaker: 'mijin', speed: '0', text: String(RESULTExample)}, // result를 여기에 넣어 tts
+// 	  headers: { 'X-NCP-APIGW-API-KEY-ID': client_id, 'X-NCP-APIGW-API-KEY': client_secret },
+// 	};
+// 	var writeStream = fs.createWriteStream('./audio/tts1.mp3'); // tts1.mp3 파일 생성
+// 	var _req = request.post(options).on('response', function(response) {
+// 	  console.log(response.statusCode); // 200
+// 	  console.log(response.headers['content-type']);
+// 	});
+// 	_req.pipe(writeStream); // file로 출력
+// 	_req.pipe(res); // 브라우저로 출력
+// });
+
+function tts(){//req, res) {
 	var api_url = 'https://naveropenapi.apigw.ntruss.com/voice/v1/tts';
 	var request = require('request');
 	var options = {
 	  url: api_url,
-	  form: { speaker: 'mijin', speed: '0', text: String(RESULTExample)}, // result를 여기에 넣어 tts
+	  form: { speaker: 'mijin', speed: '0', text: String("좋은 하루야")}, // result를 여기에 넣어 tts
 	  headers: { 'X-NCP-APIGW-API-KEY-ID': client_id, 'X-NCP-APIGW-API-KEY': client_secret },
 	};
 	var writeStream = fs.createWriteStream('./audio/tts1.mp3'); // tts1.mp3 파일 생성
@@ -81,8 +98,8 @@ app.get('/tts', function(req, res) {
 	  console.log(response.headers['content-type']);
 	});
 	_req.pipe(writeStream); // file로 출력
-	_req.pipe(res); // 브라우저로 출력
-});
+	//_req.pipe(res); // 브라우저로 출력
+}
 
 // STT
 function stt(language, filePath) {
@@ -105,13 +122,14 @@ function stt(language, filePath) {
         }
 
         //console.log(response.statusCode);
-        console.log(body);
+        //console.log(body);
         obj = JSON.parse(body).text;
         console.log("body is " + obj);
     });
 }
 
-stt('Kor', './audio/tts1.mp3'); // tts1.mp3의 음성을 읽어 obj에 저장
+tts();
+//stt('Kor', './audio/tts1.mp3'); // tts1.mp3의 음성을 읽어 obj에 저장
 
 // 실행
 app.listen(port, function(req, res) {
