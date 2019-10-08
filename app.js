@@ -1,15 +1,21 @@
 'use strict';
 require('dotenv').config({ silent: true });
 
-// dependencies
-const express = require('express');
+var express = require('express');
 const botTelegram = require('node-telegram-bot-api');
 const AssistantV1 = require('ibm-watson/assistant/v1');
 
-const server = express();
+var app = express();
+var client_id = 'qzqrzckdb6';
+var client_secret = '9XuaJ7GvnX6FCdPHzPwEs7Pg1S7LkU5G0NwC4zfg';
+var fs = require('fs');
 
-// // database dependencies
+const port = 8080;
+let context = {}
+let RESULTExample;
+let A;
 
+// DB
 const mysql = require('mysql');
 const conn=mysql.createConnection({
 	host:'101.101.160.73',
@@ -17,29 +23,18 @@ const conn=mysql.createConnection({
 	password:'xpffprmfoaRlfl123',
 	database:'song'
 });
-
 conn.connect();
 
-let A;
-
 conn.query('select * from ex', function(err, results, fields){
-	A=results;
+	A = results;
 	if (err) throw err;
 	console.log('The result is', A[0].title);
 });
 
 conn.end();
-/**
- * Context object is useful to assistant cause continue the same conversation (conversation_id)
- * Port is used when starting express server
- */
-const port = 8080;
-let context = {}
+// DB end
 
-/**
- * Insert your Credentials accordingly
- * For enviroment variables work, you must edit the file .env.example to .env (README.MD)
- */
+// Assistant
 const wAssistant = new AssistantV1({
 	version: '2019-02-28',
     username: process.env.ASSISTANT_USERNAME,
@@ -47,11 +42,10 @@ const wAssistant = new AssistantV1({
 	url: process.env.WATSON_URL,
 });
 console.log(process.env)
-/**
- * Initializing bot using your generated token on Telegram /botfather (README.MD)
- */
+
 const telegram = new botTelegram(process.env.TOKEN_TELEGRAM, { polling: true });
 
+// Telegram
 telegram.on('message', (msg) => {
 	const chatId = msg.chat.id;	
 	console.log('message', msg.text);
@@ -66,10 +60,29 @@ telegram.on('message', (msg) => {
 		else {
 			context = response.context;
 			telegram.sendMessage(chatId, response.output.text[0]+A[0].title);
+			RESULTExample = response.output.text[0]+A[0].title;
 		}
 	});	
 });
 
-server.listen(port, function(req, res) {
+// TTS
+app.get('/tts', function(req, res) {
+	var api_url = 'https://naveropenapi.apigw.ntruss.com/voice/v1/tts';
+	var request = require('request');
+	var options = {
+	  url: api_url,
+	  form: { speaker: 'mijin', speed: '0', text: String(RESULTExample)}, // result를 여기에 넣어 tts
+	  headers: { 'X-NCP-APIGW-API-KEY-ID': client_id, 'X-NCP-APIGW-API-KEY': client_secret },
+	};
+	var writeStream = fs.createWriteStream('./tts1.mp3');
+	var _req = request.post(options).on('response', function(response) {
+	  console.log(response.statusCode); // 200
+	  console.log(response.headers['content-type']);
+	});
+	_req.pipe(writeStream); // file로 출력
+	_req.pipe(res); // 브라우저로 출력
+});
+
+app.listen(port, function(req, res) {
   console.log(`Use localhost:${port} on the browser to check the server`);
 });
