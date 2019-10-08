@@ -2,6 +2,7 @@
 require('dotenv').config({ silent: true });
 
 var express = require('express');
+const request = require('request');
 const botTelegram = require('node-telegram-bot-api');
 const AssistantV1 = require('ibm-watson/assistant/v1');
 
@@ -65,7 +66,7 @@ telegram.on('message', (msg) => {
 	});	
 });
 
-// TTS
+// TTS - [ipaddress]/tts에 들어갔을 때 음성이 나옴
 app.get('/tts', function(req, res) {
 	var api_url = 'https://naveropenapi.apigw.ntruss.com/voice/v1/tts';
 	var request = require('request');
@@ -74,7 +75,7 @@ app.get('/tts', function(req, res) {
 	  form: { speaker: 'mijin', speed: '0', text: String(RESULTExample)}, // result를 여기에 넣어 tts
 	  headers: { 'X-NCP-APIGW-API-KEY-ID': client_id, 'X-NCP-APIGW-API-KEY': client_secret },
 	};
-	var writeStream = fs.createWriteStream('./tts1.mp3');
+	var writeStream = fs.createWriteStream('./tts1.mp3'); // tts1.mp3 파일 생성
 	var _req = request.post(options).on('response', function(response) {
 	  console.log(response.statusCode); // 200
 	  console.log(response.headers['content-type']);
@@ -91,8 +92,8 @@ function stt(language, filePath) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/octet-stream',
-            'X-NCP-APIGW-API-KEY-ID': clientId,
-            'X-NCP-APIGW-API-KEY': clientSecret
+            'X-NCP-APIGW-API-KEY-ID': client_id,
+            'X-NCP-APIGW-API-KEY': client_secret
         },
         body: fs.createReadStream(filePath)
     };
@@ -110,8 +111,9 @@ function stt(language, filePath) {
     });
 }
 
-stt('Kor', 'tts1.mp3'); // tts1.mp3의 음성을 읽어 obj에 저장
+//stt('Kor', 'tts1.mp3'); // tts1.mp3의 음성을 읽어 obj에 저장
 
+// 실행
 app.listen(port, function(req, res) {
   console.log(`Use localhost:${port} on the browser to check the server`);
 });
