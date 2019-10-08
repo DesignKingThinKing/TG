@@ -60,8 +60,8 @@ telegram.on('message', (msg) => {
 			console.log('error:', err);
 		else {
 			context = response.context;
-			telegram.sendMessage(chatId, response.output.text[0]+A[0].title);
-			RESULTExample = response.output.text[0]+A[0].title;
+			telegram.sendMessage(chatId, response.output.text[0]+ResultText[0].title);
+			RESULTExample = response.output.text[0]+ResultText[0].title;
 		}
 	});	
 });
@@ -75,7 +75,7 @@ app.get('/tts', function(req, res) {
 	  form: { speaker: 'mijin', speed: '0', text: String(RESULTExample)}, // result를 여기에 넣어 tts
 	  headers: { 'X-NCP-APIGW-API-KEY-ID': client_id, 'X-NCP-APIGW-API-KEY': client_secret },
 	};
-	var writeStream = fs.createWriteStream('./tts1.mp3'); // tts1.mp3 파일 생성
+	var writeStream = fs.createWriteStream('./audio/tts1.mp3'); // tts1.mp3 파일 생성
 	var _req = request.post(options).on('response', function(response) {
 	  console.log(response.statusCode); // 200
 	  console.log(response.headers['content-type']);
@@ -105,13 +105,13 @@ function stt(language, filePath) {
         }
 
         //console.log(response.statusCode);
-        //console.log(body);
+        console.log(body);
         obj = JSON.parse(body).text;
-        console.log("body is "+obj);
+        console.log("body is " + obj);
     });
 }
 
-//stt('Kor', 'tts1.mp3'); // tts1.mp3의 음성을 읽어 obj에 저장
+stt('Kor', './audio/tts1.mp3'); // tts1.mp3의 음성을 읽어 obj에 저장
 
 // 실행
 app.listen(port, function(req, res) {
