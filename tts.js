@@ -1,4 +1,4 @@
-// 네이버 음성합성 Open API 예제
+// 네이버 음성합성 Open API
 var express = require('express');
 var app = express();
 var client_id = 'qzqrzckdb6';

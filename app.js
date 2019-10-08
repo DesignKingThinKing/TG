@@ -13,7 +13,7 @@ var fs = require('fs');
 const port = 8080;
 let context = {}
 let RESULTExample;
-let A;
+let ResultText, obj;
 
 // DB
 const mysql = require('mysql');
@@ -26,9 +26,9 @@ const conn=mysql.createConnection({
 conn.connect();
 
 conn.query('select * from ex', function(err, results, fields){
-	A = results;
+	ResultText = results;
 	if (err) throw err;
-	console.log('The result is', A[0].title);
+	console.log('The result is',ResultText[0].title);
 });
 
 conn.end();
@@ -82,6 +82,35 @@ app.get('/tts', function(req, res) {
 	_req.pipe(writeStream); // file로 출력
 	_req.pipe(res); // 브라우저로 출력
 });
+
+// STT
+function stt(language, filePath) {
+    const url = `https://naveropenapi.apigw.ntruss.com/recog/v1/stt?lang=${language}`;
+    const requestConfig = {
+        url: url,
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/octet-stream',
+            'X-NCP-APIGW-API-KEY-ID': clientId,
+            'X-NCP-APIGW-API-KEY': clientSecret
+        },
+        body: fs.createReadStream(filePath)
+    };
+
+    request(requestConfig, (err, response, body) => {
+        if (err) {
+            console.log(err);
+            return;
+        }
+
+        //console.log(response.statusCode);
+        //console.log(body);
+        obj = JSON.parse(body).text;
+        console.log("body is "+obj);
+    });
+}
+
+stt('Kor', 'tts1.mp3'); // tts1.mp3의 음성을 읽어 obj에 저장
 
 app.listen(port, function(req, res) {
   console.log(`Use localhost:${port} on the browser to check the server`);
