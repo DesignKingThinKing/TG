@@ -49,18 +49,6 @@ const conn=mysql.createConnection({
 	password:'xpffprmfoaRlfl123',
 	database:'song'
 });
-
-function messageSplitDB(text){ // watson에서 온 응답
-	watsonRes=text.split(';'); // watson에서 온 응답을 split으로 나눔
-	dbTag=watsonRes[1]; // tag가 들어가는 곳
-	console.log("dbTag is "+dbTag);
-	
-	conn.query(tagSql, dbTag, function(err, results, fields){
-		ResultText = results; // 노래의 결과가 저장됨
-		if (err) throw err;
-		console.log('DB result is',ResultText);
-	});
-};
 // DB end
 
 // Assistant
@@ -88,12 +76,23 @@ telegram.on('message', (msg) => {
 			console.log('error:', err);
 		else {
 			context = response.context;
-			if(response.output.text[0].includes(';')){
-				messageSplitDB(response.output.text[0]);
+			if(response.output.text[0].includes(';')){ // 태그 구분된 경우
+				//messageSplitDB(response.output.text[0]);
 			
+				watsonRes=response.output.text[0].split(';'); // watson에서 온 응답을 split으로 나눔
+				dbTag=watsonRes[1]; // tag가 들어가는 곳
+				console.log("dbTag is "+dbTag);
+				
+				conn.query(tagSql, dbTag, function(err, results, fields){
+					ResultText = results; // 노래의 결과가 저장됨
+					if (err) throw err;
+					console.log('DB result is',ResultText);
+					if(ResultText != undefined)
+						telegram.sendMessage(chatId, watsonRes[0] +" "+ ResultText[0].title); // 답장, 여기에 url
+					else telegram.sendMessage(chatId, "결과가 없어요ㅜ");
+				});
 				//messageSplitDB("hello;sad");
-				if(ResultText != undefined) // 처음에 undefined가 나옴 - 두 번째 request에서부터! sync문제인듯
-					telegram.sendMessage(chatId, watsonRes[0] + ResultText[0].title); // 답장, 여기에 url
+				// // 처음에 undefined가 나옴 - 두 번째 request에서부터! sync문제인듯
 			}
 			else telegram.sendMessage(chatId, response.output.text[0]);
 		}
