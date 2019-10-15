@@ -12,17 +12,11 @@ const fs = require('fs');
 // for tts, stt
 const client_id = 'qzqrzckdb6';
 const client_secret = '9XuaJ7GvnX6FCdPHzPwEs7Pg1S7LkU5G0NwC4zfg';
-let tagSql = 'select * from tagTB where tag="sad"';
+let tagSql = 'select * from tagTB where tag=?';
 let context = {}
 //let RESULTExample;
 let ResultText, rseResult, obj;
 let dbTag, watsonRes;
-
-function messageSplitDB(text){// watson에서 온 응답
-	watsonRes=text.split(';'); // watson에서 온 응답을 split으로 나눔
-	dbTag=watsonRes[1]; // tag가 들어가는 곳
-	console.log("dbTag is "+dbTag);
-};
 
 // DB
 const mysql = require('mysql');
@@ -32,15 +26,18 @@ const conn=mysql.createConnection({
 	password:'xpffprmfoaRlfl123',
 	database:'song'
 });
-conn.connect();
 
-conn.query(tagSql, dbTag, function(err, results, fields){
-	ResultText = results; // 노래의 결과가 저장됨
-	if (err) throw err;
-	console.log('DB result is',ResultText);
-});
-
-conn.end();
+function messageSplitDB(text){// watson에서 온 응답
+	watsonRes=text.split(';'); // watson에서 온 응답을 split으로 나눔
+	dbTag=watsonRes[1]; // tag가 들어가는 곳
+	console.log("dbTag is "+dbTag);
+	
+	conn.query(tagSql, dbTag, function(err, results, fields){
+		ResultText = results; // 노래의 결과가 저장됨
+		if (err) throw err;
+		console.log('DB result is',ResultText);
+	});
+};
 // DB end
 
 // Assistant
@@ -67,10 +64,11 @@ telegram.on('message', (msg) => {
 		if (err)
 			console.log('error:', err);
 		else {
-			messageSplitDB(response.output.text[0]);
-			context = response.context;
+			//messageSplitDB(response.output.text[0]);
 			messageSplitDB("hello;sad");
-			telegram.sendMessage(chatId,watsonRes[0]+ResultText[0].title); // 답장, 여기에 url
+			//context = response.context;
+			if(ResultText!=undefined)
+				telegram.sendMessage(chatId,watsonRes[0]+ResultText[0].title); // 답장, 여기에 url
 			//RESULTExample = response.output.text[0]+ResultText[0].title;
 		}
 	});
