@@ -27,7 +27,7 @@ const conn=mysql.createConnection({
 	database:'song'
 });
 
-function messageSplitDB(text){// watson에서 온 응답
+function messageSplitDB(text){ // watson에서 온 응답
 	watsonRes=text.split(';'); // watson에서 온 응답을 split으로 나눔
 	dbTag=watsonRes[1]; // tag가 들어가는 곳
 	console.log("dbTag is "+dbTag);
@@ -59,17 +59,17 @@ telegram.on('message', (msg) => {
 	wAssistant.message({
 		workspace_id: process.env.WORKSPACE_ID,
 		input: {'text': msg.text},
-		//context: context
+		context: context
 	},(err, response) => {
 		if (err)
 			console.log('error:', err);
 		else {
+			context = response.context;
+			//telegram.sendMessage(response.output.text[0]);
 			//messageSplitDB(response.output.text[0]);
 			messageSplitDB("hello;sad");
-			//context = response.context;
-			if(ResultText!=undefined)
-				telegram.sendMessage(chatId,watsonRes[0]+ResultText[0].title); // 답장, 여기에 url
-			//RESULTExample = response.output.text[0]+ResultText[0].title;
+			if(ResultText != undefined) // 처음에 undefined가 나옴 - 두 번째 request에서부터! sync문제인듯
+				telegram.sendMessage(chatId, watsonRes[0] + ResultText[0].title); // 답장, 여기에 url
 		}
 	});
 });
