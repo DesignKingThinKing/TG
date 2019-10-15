@@ -88,7 +88,7 @@ telegram.on('message', (msg) => {
 					if (err) throw err;
 					console.log('DB result is',ResultText);
 					if(ResultText != undefined)
-						telegram.sendMessage(chatId, watsonRes[0] +" "+ ResultText[0].title); // 답장, 여기에 url
+					telegram.sendMessage(chatId, watsonRes[0] +"\nhttps://music.naver.com/search/search.nhn?query="+ ResultText[0].title); // 답장, 여기에 url
 					else telegram.sendMessage(chatId, "결과가 없어요ㅜ");
 				});
 				//messageSplitDB("hello;sad");
