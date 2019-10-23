@@ -19,26 +19,37 @@ let ResultText, rseResult, obj;
 let dbTag, watsonRes;
 let tag = new Array(5);
 let count = 0;
+let singer = null;
 
 function saveTag(temp){
-   tag[count] = temp;
-   count++;
+	tag[count] = temp;
+	count++;
+}
+
+function saveSinger(temp){
+	singer = temp;
 }
 
 function searchTag(){
-   let base = 'select id from song join '
-   for (let i = 0;i < count;i++){
-      base = base.concat(tag[i], 'on song.id=', tag[i], '.id');
-      if (i==count-1)
-         base = base.concat(' where rownum=1;');
-      else
-         base = base.concat(' join');
-   }
-   return base;
+	let base = 'select 제목, 가수 from 노래 where';
+	if (singer!=null)
+		base.concat(' 가수=', singer, 'and');
+	base = base.concat(' 노래id in (select 노래id from 태그 where');
+	for (let i = 0;i < count;i++){
+		base = base.concat(' 태그= "', tag[i],'"');
+		console.log(tag[i]);
+		if (i==count-1)
+			base = base.concat(');');
+		else{
+			base = base.concat(' or');
+		}
+	}
+	return base;
 }
 
-function initTag(){
-   count = 0;
+function init(){
+	count = 0;
+	singer = null;
 }
 
 // DB
@@ -47,7 +58,7 @@ const conn=mysql.createConnection({
 	host:'101.101.160.73',
 	user:'root',
 	password:'xpffprmfoaRlfl123',
-	database:'song'
+	database:'ggiriDB'
 });
 // DB end
 
@@ -76,25 +87,30 @@ telegram.on('message', (msg) => {
 			console.log('error:', err);
 		else {
 			context = response.context;
-			if(response.output.text[0].includes(';')){ // 태그 구분된 경우
+			if(response.output.text[0].includes('|')){ // 태그 구분된 경우
 				//messageSplitDB(response.output.text[0]);
 			
-				watsonRes=response.output.text[0].split(';'); // watson에서 온 응답을 split으로 나눔
-				dbTag=watsonRes[1]; // tag가 들어가는 곳
-				console.log("dbTag is "+dbTag);
+				watsonRes=response.output.text[0].split('|'); // watson에서 온 응답을 split으로 나눔
+				if (watsonRes[1]=='가수') saveSinger(watsonRes[2]);
+				else if(count!=4) saveTag(watsonRes[1]);
 				
-				conn.query(tagSql, dbTag, function(err, results, fields){
+				conn.query(searchTag(), function(err, results, fields){
 					ResultText = results; // 노래의 결과가 저장됨
 					if (err) throw err;
-					console.log('DB result is',ResultText);
+					console.log('DB result is', ResultText);
 					if(ResultText != undefined)
-					telegram.sendMessage(chatId, watsonRes[0] +"\nhttps://music.naver.com/search/search.nhn?query="+ ResultText[0].title); // 답장, 여기에 url
+						telegram.sendMessage(chatId, watsonRes[0]
+						+ "\nhttps://music.naver.com/search/search.nhn?query="
+						+ ResultText[0].제목 + ' ' + ResultText[0].가수); // 답장, 여기에 url
 					else telegram.sendMessage(chatId, "결과가 없어요ㅜ");
 				});
 				//messageSplitDB("hello;sad");
 				// // 처음에 undefined가 나옴 - 두 번째 request에서부터! sync문제인듯
 			}
-			else telegram.sendMessage(chatId, response.output.text[0]);
+			else {
+				telegram.sendMessage(chatId, response.output.text[0]);
+				init();
+			}
 		}
 	});
 });
@@ -171,7 +187,7 @@ function stt(language, filePath) {
 
 // 실행
 app.listen(port, function(req, res) {
-  console.log(`Use localhost:${port} on the browser to check the server`);
+	console.log(`Use localhost:${port} on the browser to check the server`);
 });
 
 // 'use strict';
