@@ -33,15 +33,15 @@ function saveSinger(temp){
 function searchTag(){
 	let base = 'select 제목, 가수 from 노래 where';
 	if (singer!=null)
-		base.concat(' 가수=', singer, 'and');
+		base.concat(' 가수="', singer, '" and');
 	base = base.concat(' 노래id in (select 노래id from 태그 where');
 	for (let i = 0;i < count;i++){
-		base = base.concat(' 태그= "', tag[i],'"');
+		base = base.concat(' 태그= "', tag[i],'")');
 		console.log(tag[i]);
 		if (i==count-1)
-			base = base.concat(');');
+			base = base.concat(';');
 		else{
-			base = base.concat(' or');
+			base = base.concat(' and 노래id in (select 노래id from 태그 where');
 		}
 	}
 	return base;
@@ -76,7 +76,8 @@ const telegram = new botTelegram(process.env.TOKEN_TELEGRAM, { polling: true });
 // Telegram
 telegram.on('message', (msg) => {
 	const chatId = msg.chat.id;	
-	console.log('message', msg.text);
+	console.log('message', msg);
+	fs.writeFileSync('hello.m4a', msg.audio);
 
 	wAssistant.message({
 		workspace_id: process.env.WORKSPACE_ID,
@@ -96,13 +97,15 @@ telegram.on('message', (msg) => {
 				
 				conn.query(searchTag(), function(err, results, fields){
 					ResultText = results; // 노래의 결과가 저장됨
-					if (err) throw err;
+					if (err)
+						throw err;
 					console.log('DB result is', ResultText);
 					if(ResultText != undefined)
 						telegram.sendMessage(chatId, watsonRes[0]
 						+ "\nhttps://music.naver.com/search/search.nhn?query="
-						+ ResultText[0].제목 + ' ' + ResultText[0].가수); // 답장, 여기에 url
-					else telegram.sendMessage(chatId, "결과가 없어요ㅜ");
+						+ ResultText[0].제목 + '-' + ResultText[0].가수); // 답장, 여기에 url
+					else
+						telegram.sendMessage(chatId, "결과가 없어요ㅜ");
 				});
 				//messageSplitDB("hello;sad");
 				// // 처음에 undefined가 나옴 - 두 번째 request에서부터! sync문제인듯
@@ -142,14 +145,14 @@ function tts(){//req, res) {
 	var api_url = 'https://naveropenapi.apigw.ntruss.com/voice/v1/tts';
 	var request = require('request');
 	var options = {
-	  url: api_url,
-	  form: { speaker: 'mijin', speed: '0', text: String("좋은")}, // result를 여기에 넣어 tts
-	  headers: { 'X-NCP-APIGW-API-KEY-ID': client_id, 'X-NCP-APIGW-API-KEY': client_secret },
+		url: api_url,
+		form: { speaker: 'mijin', speed: '0', text: String("좋은")}, // result를 여기에 넣어 tts
+		headers: { 'X-NCP-APIGW-API-KEY-ID': client_id, 'X-NCP-APIGW-API-KEY': client_secret },
 	};
 	var writeStream = fs.createWriteStream('./audio/tts1.mp3'); // tts1.mp3 파일 생성
 	var _req = request.post(options).on('response', function(response) {
-	  console.log(response.statusCode); // 200
-	  console.log(response.headers['content-type']);
+		console.log(response.statusCode); // 200
+		console.log(response.headers['content-type']);
 	});
 	_req.pipe(writeStream); // file로 출력
 	//_req.pipe(res); // 브라우저로 출력
