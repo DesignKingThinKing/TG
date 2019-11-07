@@ -17,37 +17,59 @@ let context = {}
 // let RESULTExample;
 let ResultText, rseResult, obj;
 let dbTag, watsonRes;
-let tag = new Array(5);
+let tag = new Array(10);
 let count = 0;
 let singer = null;
+let tempId;
+let more = null;
+let moreThan;
+let less = null;
+let lessThan;
 
 function saveTag(temp){
-	tag[count] = temp;
-	count++;
+	if (count != 9) {
+		tag[count] = temp;
+		count++;
+	}
 }
 
 function saveSinger(temp){
 	singer = temp;
 }
 
+function saveMore(){
+	return 'select 퍼센트 from 태그 where 태그="'+more+'" and 노래id="'+tempId+'";';
+}
+
+function saveLess(){
+	return 'select 퍼센트 from 태그 where 태그="'+less+'" and 노래id="'+tempId+'";';
+}
+
 function searchTag(){
-	let base = 'select 제목, 가수 from 노래 where';
+	let base = 'select 제목, 가수, n.노래id from 노래 n, 태그 t where';
 	if (singer!=null)
 		base.concat(' 가수="', singer, '" and');
-	base = base.concat(' 노래id in (select 노래id from 태그 where');
-	for (let i = 0;i < count;i++){
+	base = base.concat(' n.노래id in (select 노래id from 태그 where');
+	for (let i = 0;i < count;i++) {
 		base = base.concat(' 태그= "', tag[i],'")');
 		console.log(tag[i]);
-		if (i==count-1)
-			base = base.concat(';');
-		else{
-			base = base.concat(' and 노래id in (select 노래id from 태그 where');
-		}
+		if (i!=count-1)
+			base = base.concat(' and n.노래id in (select 노래id from 태그 where');
 	}
+	console.log(' t.퍼센트>'+moreThan+' and t.태그="' + more + '"');
+	if (more != null && tag.includes(more))
+		base = base.concat(' and n.노래id=t.노래id and' + 
+		' t.퍼센트>'+moreThan+' and t.태그="' + more + '"');
+	if (less != null && tag.includes(less))
+		base = base.concat(' and n.노래id=t.노래id and' + 
+		' t.퍼센트<'+lessThan+' and t.태그="' + less + '"');
+	base = base.concat(' group by 노래id;');
 	return base;
 }
 
 function init(){
+	more = null;
+	less = null;
 	count = 0;
 	singer = null;
 }
@@ -55,7 +77,7 @@ function init(){
 // DB
 const mysql = require('mysql');
 const conn=mysql.createConnection({
-	host:'101.101.160.73',
+	host:'35.188.92.120',
 	user:'root',
 	password:'xpffprmfoaRlfl123',
 	database:'ggiriDB'
@@ -90,20 +112,62 @@ telegram.on('message', (msg) => {
 			context = response.context;
 			if(response.output.text[0].includes('|')){ // 태그 구분된 경우
 				//messageSplitDB(response.output.text[0]);
-			
+
 				watsonRes=response.output.text[0].split('|'); // watson에서 온 응답을 split으로 나눔
-				if (watsonRes[1]=='가수') saveSinger(watsonRes[2]);
-				else if(count!=4) saveTag(watsonRes[1]);
-				
+				if (watsonRes[1]=='가수')
+					saveSinger(watsonRes[2]);
+				else if (watsonRes[1]=='더') {
+					more = watsonRes[2];
+					if (!tag.includes(more))
+						saveTag(more);
+					else
+						conn.query(saveMore(), function(err, results, fields){
+							ResultText = results;
+							if (err)
+								throw err;
+							if(ResultText != undefined) {
+								moreThan = ResultText[0].퍼센트;
+							}
+							console.log(moreThan);
+						});
+				}
+				else if (watsonRes[1]=='덜') {
+					less = watsonRes[2];
+					if (tag.includes(less))
+						conn.query(saveLess(), function(err, results, fields){
+							ResultText = results;
+							if (err)
+								throw err;
+							if(ResultText != undefined) {
+								lessThan = ResultText[0].퍼센트;
+							}
+							console.log(lessThan);
+						});
+				}
+				else {
+					saveTag(watsonRes[1]);
+				}
+				console.log('더'+more);
+				console.log('덜'+less);
 				conn.query(searchTag(), function(err, results, fields){
 					ResultText = results; // 노래의 결과가 저장됨
 					if (err)
 						throw err;
 					console.log('DB result is', ResultText);
-					if(ResultText != undefined)
-						telegram.sendMessage(chatId, watsonRes[0]
-						+ "\nhttps://music.naver.com/search/search.nhn?query="
-						+ ResultText[0].제목 + '-' + ResultText[0].가수); // 답장, 여기에 url
+					if(ResultText != undefined) {
+						let reply;
+						reply = watsonRes[0];
+						let count = 5;
+						if (ResultText.length < 5)
+							count = ResultText.length;
+						for (let i=0;i < count;i++){
+							reply = reply.concat("\n" + ResultText[i].제목 + '-' + ResultText[i].가수);
+						}
+						reply = reply.concat("\nhttps://music.naver.com/search/search.nhn?query="
+							+ ResultText[0].제목 + '-' + ResultText[0].가수);
+						telegram.sendMessage(chatId, reply);
+						tempId = ResultText[0].노래id;
+					}
 					else
 						telegram.sendMessage(chatId, "결과가 없어요ㅜ");
 				});
