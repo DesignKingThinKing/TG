@@ -18,8 +18,11 @@ let context = {}
 let ResultText, rseResult, obj;
 let dbTag, watsonRes;
 let tag = new Array(10);
+let tag_except = new Array(10);
 let count = 0;
+let count_except = 0;
 let singer = null;
+let singer_except = null;
 let tempId;
 let more = null;
 let moreThan;
@@ -33,8 +36,19 @@ function saveTag(temp){
 	}
 }
 
+function saveTag_except(temp){
+	if (count_except != 9) {
+		tag_except[count_except] = temp;
+		count_except++;
+	}
+}
+
 function saveSinger(temp){
 	singer = temp;
+}
+
+function saveSinger_except(temp){
+	singer_except = temp;
 }
 
 function searchSimilar(){
@@ -48,9 +62,10 @@ function searchSimilar(){
 	   (select max(퍼센트) from 태그 where 노래id=`+tempId+`) 
 	   and 노래id=`+tempId+`  limit 1) 
 	and n.노래id <>`+tempId+`
-	order by 퍼센트 desc ;
+	order by 퍼센트 desc order by rand();
 	`
 }
+
 function searchSimilar2(songTitle){
 	return `
 	select n.제목, n.가수, n.노래id
@@ -63,7 +78,7 @@ function searchSimilar2(songTitle){
 	   and t.노래id=n.노래id 
 	   and n.제목="`+songTitle+`") 
 	and n.제목 <> "`+songTitle+`"
-	order by 퍼센트 desc; 
+	order by 퍼센트 desc order by rand(); 
 	`
 }
 
@@ -75,43 +90,62 @@ function saveLess(){
 	return 'select 퍼센트 from 태그 where 태그="'+less+'" and 노래id="'+tempId+'";';
 }
 
+function anySong(){
+	return 'select 제목, 가수, 노래id from 노래 order by rand();';
+}
+
 function searchTag(){
 	let base = 'select n.제목, n.가수, n.노래id from 노래 n, 태그 t where';
 	if (singer!=null){
 		if (count==0){
-			return 'select n.제목, n.가수, n.노래id from 노래 n where n.가수="'+ singer+ '";';
+			return 'select n.제목, n.가수, n.노래id from 노래 n where n.가수="'+singer+ '" order by rand();';
 		}
-		console.log(singer);
+		//console.log(singer);
 		base = base.concat(' n.가수="', singer, '" and');
 	}
+	if (singer_except!=null){
+		if (count==0){
+			return 'select n.제목, n.가수, n.노래id from 노래 n where n.가수!="'+singer_except+ '" order by rand();';
+		}
+		//console.log(singer);
+		base = base.concat(' n.가수!="', singer_except, '" and');
+	}
 	if (count==0)
-		return 'select n.제목, n.가수, n.노래id from 노래 n where n.가수="없지롱";';
+		return 'select n.제목, n.가수, n.노래id from 노래 n where n.가수="없지롱" order by rand();';
 	base = base.concat(' n.노래id in (select 노래id from 태그 where');
 	for (let i = 0;i < count;i++) {
-		base = base.concat(' 태그= "', tag[i],'")');
-		console.log(tag[i]);
+		base = base.concat(' 태그= "', tag[i], '")');
+		//console.log(tag[i]);
 		if (i!=count-1)
 			base = base.concat(' and n.노래id in (select 노래id from 태그 where');
 	}
-	console.log(' t.퍼센트>'+moreThan+' and t.태그="' + more + '"');
+	for (let i = 0;i < count_except;i++) {
+		//console.log(tag_except[i]);
+		base = base.concat(' and n.노래id not in (select 노래id from 태그 where 태그="'+tag_except[i]+'")');
+	}
+	//console.log(' t.퍼센트>'+moreThan+' and t.태그="' + more + '"');
 	if (more != null && tag.includes(more))
 		base = base.concat(' and n.노래id=t.노래id and' + 
 		' t.퍼센트>'+moreThan+' and t.태그="' + more + '"');
 	if (less != null && tag.includes(less))
 		base = base.concat(' and n.노래id=t.노래id and' + 
 		' t.퍼센트<'+lessThan+' and t.태그="' + less + '"');
-	base = base.concat(' group by 노래id;');
-	console.log(base);
+	base = base.concat(' group by 노래id order by rand();');
+	//console.log(base);
 	return base;
 }
 
-function init(){
+function init() {
 	more = null;
 	less = null;
 	count = 0;
+	count_except = 0;
 	singer = null;
+	singer_except = null;
 	for (let i = 0;i < 10;i++)
 		tag[i]=null;
+	for (let i = 0;i < 10;i++)
+		tag_except[i]=null;
 }
 
 // DB
@@ -137,7 +171,7 @@ function songRecommend(chatId){
 	conn.query(searchTag(), function(err, results, fields){
 		ResultText = results; // 노래의 결과가 저장됨
 		if (err) throw err;
-		console.log('DB result is', ResultText);
+		//console.log('DB result is', ResultText);
 		// 응답 : 최대 다섯 개의 노래를 추천해줌
 		if(ResultText.length != 0) {
 			let reply = watsonRes[0]+"\n";
@@ -158,7 +192,7 @@ function songRecommend(chatId){
 }
 // telegram start
 const telegram = new botTelegram(process.env.TOKEN_TELEGRAM, { polling: true });
- 
+
 telegram.on('message', (msg) => {
 	const chatId = msg.chat.id;
 	// 음성 메시지 처리
@@ -173,10 +207,14 @@ telegram.on('message', (msg) => {
 		else {
 			context = response.context;
 			if(response.output.text[0].includes('|')){ // 태그 구분된 경우
-				console.log(response.output.text[0]);
+				//console.log(response.output.text[0]);
 				watsonRes=response.output.text[0].split('|'); // watson에서 온 응답을 split으로 나눔
 				if (watsonRes[1]=='가수'){
 					saveSinger(watsonRes[2]);
+					songRecommend(chatId);
+				}
+				else if (watsonRes[1]=='가수제외'){
+					saveSinger_except(watsonRes[2]);
 					songRecommend(chatId);
 				}
 				else if (watsonRes[1]=='더') {
@@ -194,7 +232,7 @@ telegram.on('message', (msg) => {
 							if(ResultText.length != 0) {
 								moreThan = ResultText[0].퍼센트;
 							}
-							console.log("this is more than!!"+moreThan);
+							//console.log("this is more than!!"+moreThan);
 							songRecommend(chatId);
 						});
 					}
@@ -209,7 +247,7 @@ telegram.on('message', (msg) => {
 							if(ResultText.length != 0) {
 								lessThan = ResultText[0].퍼센트;
 							}
-							console.log("this is less than!!"+lessThan);
+							//console.log("this is less than!!"+lessThan);
 							if (lessThan <= 20){
 								let temp = -1;
 								for (let i = 0;i < count;i++)
@@ -231,7 +269,7 @@ telegram.on('message', (msg) => {
 						conn.query(searchSimilar(), function(err, results, fields){
 							ResultText = results;
 							if (err) throw err;
-							console.log('DB result is', ResultText);
+							//console.log('DB result is', ResultText);
 							if(ResultText.length != 0) {
 								let reply = watsonRes[0]+"\n";
 								let count = 5;
@@ -252,7 +290,7 @@ telegram.on('message', (msg) => {
 						conn.query(searchSimilar2(watsonRes[2]), function(err, results, fields){
 							ResultText = results;
 							if (err) throw err;
-							console.log('DB result is', ResultText);
+							//console.log('DB result is', ResultText);
 							if(ResultText.length != 0) {
 								let reply = watsonRes[0]+"\n";
 								let count = 5;
@@ -278,7 +316,7 @@ telegram.on('message', (msg) => {
 						`, function(err, results, fields){
 							ResultText = results;
 							if (err) throw err;
-							console.log('DB result is', ResultText);
+							//console.log('DB result is', ResultText);
 							if(ResultText.length != 0) {
 								let reply = watsonRes[0]+"\n";
 								let count = 5;
@@ -294,6 +332,32 @@ telegram.on('message', (msg) => {
 							else
 								telegram.sendMessage(chatId, "그런 노래는 못찾겠어요(´｡•_•｡`)");
 					});
+				}
+				else if(watsonRes[1]=='아무무'){
+					conn.query(anySong(), function(err, results, fields){
+							ResultText = results;
+							if (err) throw err;
+							//console.log('DB result is', ResultText);
+							if(ResultText.length != 0) {
+								let reply = watsonRes[0]+"\n";
+								let count = 5;
+								if (ResultText.length < 5)
+								count = ResultText.length;
+								for (let i = 0 ; i < count ; i++)
+									reply = reply.concat("\n" + ResultText[i].제목 + '-' + ResultText[i].가수);
+								reply = reply.concat("\nhttps://music.naver.com/search/search.nhn?query="
+									+ ResultText[0].제목 + '-' + ResultText[0].가수);
+								telegram.sendMessage(chatId, reply);
+								tempId = ResultText[0].노래id;
+						 	}
+							else
+								telegram.sendMessage(chatId, "그런 노래는 못찾겠어요(´｡•_•｡`)");
+					});
+				}
+				else if(watsonRes[1]=='제외'){
+					if(!tag_except.includes(watsonRes[2]))
+						saveTag_except(watsonRes[2]);
+					songRecommend(chatId);
 				}
 				else {
 					if(!tag.includes(watsonRes[1]))
