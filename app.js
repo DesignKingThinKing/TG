@@ -62,7 +62,7 @@ function searchSimilar(){
 	   (select max(퍼센트) from 태그 where 노래id=`+tempId+`) 
 	   and 노래id=`+tempId+`  limit 1) 
 	and n.노래id <>`+tempId+`
-	order by 퍼센트 desc order by rand();
+	order by 퍼센트 desc;
 	`
 }
 
@@ -78,7 +78,7 @@ function searchSimilar2(songTitle){
 	   and t.노래id=n.노래id 
 	   and n.제목="`+songTitle+`") 
 	and n.제목 <> "`+songTitle+`"
-	order by 퍼센트 desc order by rand(); 
+	order by 퍼센트 desc; 
 	`
 }
 
